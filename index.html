@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>범용 약물 희석 계산기</title>
+  <style>
+    :root{ --blue:#2563eb; --bg:#f9fafb; --card:#fff; --border:#e5e7eb; --muted:#6b7280; --ink:#111827; --accent:#34d399; --warn:#b91c1c }
+    *{box-sizing:border-box}
+    body{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:0;background:var(--bg);color:var(--ink);padding:24px}
+    h2{margin:0 0 16px;font-size:1.45rem;color:var(--blue);text-align:center;display:flex;align-items:center;justify-content:center;gap:8px}
+    h2 .icon{font-size:1.5rem;color:var(--accent)}
+
+    /* Card (용량 계산기와 통일) */
+    .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:18px;max-width:580px;margin:0 auto;box-shadow:0 3px 8px rgba(0,0,0,.06);transition:transform .2s}
+    .card:hover{transform:translateY(-2px)}
+
+    .row{display:flex;flex-direction:column;gap:14px}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    @media (max-width:560px){ .grid{grid-template-columns:1fr} }
+
+    label{font-size:.92rem;font-weight:600;margin-bottom:4px;color:#1e40af}
+    input, select{padding:9px;font-size:1rem;border:1px solid var(--border);border-radius:10px;text-align:center;background:#fff;transition:border .2s}
+    input:focus, select:focus{border-color:var(--blue);outline:none;box-shadow:0 0 0 2px rgba(37,99,235,.2)}
+
+    .inline{display:flex;gap:6px;align-items:center}
+    .inline input{flex:1;min-width:0}
+    .unit{min-width:100px}
+    select option.red{color:var(--warn);font-weight:700}
+
+    .result{margin-top:12px;font-size:1.08rem;font-weight:700;color:#1e3a8a;text-align:center;line-height:1.5;padding:10px;border-radius:10px;background:#f1f5f9}
+
+    .small{font-size:.85rem;color:#334155;text-align:center}
+  </style>
+</head>
+<body>
+  <h2><span class="icon">🧴</span> 범용 약물 희석 계산기</h2>
+
+  <section class="card">
+    <div class="row">
+      <div class="grid">
+        <div>
+          <label>약물 이름</label>
+          <input id="p_name" placeholder="입력해주세요" />
+        </div>
+        <div>
+          <label>분말 총량</label>
+          <div class="inline">
+            <input id="p_mass" type="number" min="0" step="0.1" placeholder="예: 500" />
+            <select id="p_mass_unit" class="unit">
+              <option value="mg">mg</option>
+              <option value="g">g</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label>목표 농도</label>
+          <div class="inline">
+            <input id="p_target" type="number" min="0" step="0.01" placeholder="예: 50" />
+            <select id="p_target_unit" class="unit">
+              <option value="mg/mL" selected>mg/mL (기본)</option>
+              <option value="ug/mL">ug/mL</option>
+              <option value="mg/0.1mL" class="red">mg/0.1mL *</option>
+              <option value="ug/0.1mL" class="red">ug/0.1mL *</option>
+            </select>
+          </div>
+          <div class="small" id="u_hint">최종 결과는 아래에 mL 기준으로 표시됩니다.</div>
+        </div>
+      </div>
+
+      <div class="result" id="p_out">
+        희석법<br>
+        <span class="small" id="p_out_detail">약물을 희석액 - mL 에 조제해주세요.</span>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    // --- 유틸: 단위 변환 ---
+    const massFactorMg = { 'g': 1000, 'mg': 1, 'ug': 0.001 };
+    const concTo_mg_per_mL = (val, unit) => {
+      if(!isFinite(val)) return NaN;
+      switch(unit){
+        case 'mg/mL': return val;
+        case 'ug/mL': return val * 0.001;          // ug/mL → mg/mL
+        case 'mg/0.1mL': return val * 10;          // mg/0.1mL → mg/mL
+        case 'ug/0.1mL': return val * 0.01;        // ug/0.1mL → mg/mL
+        default: return NaN;
+      }
+    };
+
+    // --- UI: 0.1 mL 경고 문구 (하단만) ---
+    function updateUnitHint(){
+      const sel = document.getElementById('p_target_unit');
+      const hint = document.getElementById('u_hint');
+      const is01 = /0\.1mL$/.test(sel.value);
+      hint.innerHTML = is01
+        ? '<span style="color:#b91c1c;font-weight:700">* 0.1 mL 기준 단위입니다.</span>'
+        : '최종 결과는 아래에 mL 기준으로 표시됩니다.';
+    }
+
+    // --- 분말형 계산 ---
+    function calcPowder(){
+      const mass = parseFloat(document.getElementById('p_mass').value);
+      const mUnit = document.getElementById('p_mass_unit').value;
+      const tgt = parseFloat(document.getElementById('p_target').value);
+      const tUnit = document.getElementById('p_target_unit').value;
+
+      const mass_mg = mass * (massFactorMg[mUnit] || 1);
+      const target_mg_per_mL = concTo_mg_per_mL(tgt, tUnit);
+
+      const out = document.getElementById('p_out_detail');
+      let add='-';
+
+      if(isFinite(mass_mg) && mass_mg>0 && isFinite(target_mg_per_mL) && target_mg_per_mL>0){
+        const V = mass_mg / target_mg_per_mL; // mL
+        add = `${V.toFixed(2)} mL`;
+      }
+      out.textContent = `약물을 희석액 ${add} 에 조제해주세요.`;
+    }
+
+    // --- 바인딩 ---
+    ['p_name','p_mass','p_mass_unit','p_target','p_target_unit'].forEach(id=>{
+      document.getElementById(id).addEventListener('input', ()=>{ if(id==='p_target_unit') updateUnitHint(); calcPowder(); });
+      document.getElementById(id).addEventListener('change', ()=>{ if(id==='p_target_unit') updateUnitHint(); calcPowder(); });
+    });
+
+    // --- 초기화 ---
+    updateUnitHint();
+    calcPowder();
+
+    // =================
+    // 개발용 간단 테스트
+    // =================
+    (function runTests(){
+      const nearly = (a,b,eps=1e-9)=> Math.abs(a-b) < eps;
+      const tests = [];
+
+      // 단위 변환 테스트 (ug 표기)
+      tests.push(['conv mg/0.1mL → mg/mL', nearly(concTo_mg_per_mL(5,'mg/0.1mL'), 50)]);
+      tests.push(['conv ug/mL → mg/mL', nearly(concTo_mg_per_mL(500,'ug/mL'), 0.5)]);
+      tests.push(['conv ug/0.1mL → mg/mL', nearly(concTo_mg_per_mL(100,'ug/0.1mL'), 1)]); // 100 ug/0.1mL = 1 mg/mL
+
+      // 분말: 500 mg → 50 mg/mL ⇒ 10 mL
+      const Vpow = 500 / 50;
+      tests.push(['powder V', nearly(Vpow, 10)]);
+
+      if(window.console && console.groupCollapsed){
+        console.groupCollapsed('%cSelf-tests','background:#eef;padding:2px 6px;border-radius:6px');
+        tests.forEach(([name, ok])=> console[ok? 'log':'error'](`${ok?'✅':'❌'} ${name}`));
+        console.groupEnd();
+      }
+    })();
+  </script>
+</body>
+</html>
