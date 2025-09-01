@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>범용 약물 희석 계산기</title>
   <style>
-    :root{ --blue:#2563eb; --bg:#f9fafb; --card:#fff; --border:#e5e7eb; --muted:#6b7280; --ink:#111827; --accent:#34d399; --warn:#b91c1c }
+    :root{ --blue:#003399; --bg:#f9fafb; --card:#fff; --border:#e5e7eb; --muted:#6b7280; --ink:#111827; --accent:#34d399; --warn:#b91c1c }
     *{box-sizing:border-box}
     body{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:0;background:var(--bg);color:var(--ink);padding:24px}
     h2{margin:0 0 16px;font-size:1.45rem;color:var(--blue);text-align:center;display:flex;align-items:center;justify-content:center;gap:8px}
@@ -34,7 +34,7 @@
   </style>
 </head>
 <body>
-  <h2><span class="icon">🧴</span> 범용 약물 희석 계산기</h2>
+  <h2><span class="icon">💉</span> 범용 약물 희석 계산기</h2>
 
   <section class="card">
     <div class="row">
@@ -64,12 +64,13 @@
               <option value="ug/0.1mL" class="red">ug/0.1mL *</option>
             </select>
           </div>
+          <br>
           <div class="small" id="u_hint">최종 결과는 아래에 mL 기준으로 표시됩니다.</div>
         </div>
       </div>
 
       <div class="result" id="p_out">
-        희석법<br>
+        희석법<br><br>
         <span class="small" id="p_out_detail">약물을 희석액 - mL 에 조제해주세요.</span>
       </div>
     </div>
